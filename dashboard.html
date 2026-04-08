@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Retail Sales | Adrover Consultoría</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1E2A3A; color: #FFFFFF; min-height: 100vh; padding: 24px; }
+
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; padding-bottom: 16px; border-bottom: 1px solid #2D3F55; }
+    .header-left h1 { font-size: 26px; font-weight: 700; color: #FFFFFF; letter-spacing: 0.5px; }
+    .header-left p { font-size: 13px; color: #8BA3BE; margin-top: 4px; }
+    .header-badge { background: #2D3F55; border: 1px solid #00D4AA33; border-radius: 8px; padding: 8px 16px; text-align: right; }
+    .header-badge span { display: block; font-size: 11px; color: #8BA3BE; }
+    .header-badge strong { font-size: 13px; color: #00D4AA; }
+
+    .tabs { display: flex; gap: 8px; margin-bottom: 24px; }
+    .tab { padding: 9px 22px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.2s; }
+    .tab.active { background: #00D4AA; color: #1E2A3A; }
+    .tab:not(.active) { background: #2D3F55; color: #8BA3BE; border-color: #2D3F55; }
+    .tab:not(.active):hover { border-color: #00D4AA55; color: #FFFFFF; }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 24px; }
+    .kpi-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+
+    .kpi-card { background: #2D3F55; border-radius: 12px; padding: 20px 16px; border: 1px solid #3A5070; position: relative; overflow: hidden; }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: #00D4AA; border-radius: 12px 12px 0 0; }
+    .kpi-card .icon { font-size: 22px; margin-bottom: 10px; }
+    .kpi-card .label { font-size: 11px; color: #8BA3BE; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+    .kpi-card .value { font-size: 22px; font-weight: 700; color: #00D4AA; line-height: 1.1; }
+    .kpi-card .sub { font-size: 11px; color: #8BA3BE; margin-top: 6px; }
+    .kpi-card.blue::before { background: #2196F3; }
+    .kpi-card.blue .value { color: #2196F3; }
+    .kpi-card.orange::before { background: #FF6B35; }
+    .kpi-card.orange .value { color: #FF6B35; }
+
+    .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .chart-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+    .chart-box { background: #2D3F55; border-radius: 12px; padding: 20px; border: 1px solid #3A5070; }
+    .chart-box h3 { font-size: 13px; font-weight: 600; color: #FFFFFF; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .chart-box h3 span { color: #8BA3BE; font-weight: 400; font-size: 11px; text-transform: none; letter-spacing: 0; margin-left: 6px; }
+    canvas { max-height: 220px; }
+
+    .table-box { background: #2D3F55; border-radius: 12px; padding: 20px; border: 1px solid #3A5070; margin-bottom: 16px; overflow-x: auto; }
+    .table-box h3 { font-size: 13px; font-weight: 600; color: #FFFFFF; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead th { background: #1E2A3A; color: #8BA3BE; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; padding: 10px 14px; text-align: left; font-weight: 600; }
+    tbody tr { border-bottom: 1px solid #1E2A3A; }
+    tbody tr:hover { background: #1E2A3A55; }
+    tbody td { padding: 11px 14px; color: #FFFFFF; }
+
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+    .badge-green { background: #00D4AA22; color: #00D4AA; border: 1px solid #00D4AA44; }
+    .badge-blue  { background: #2196F322; color: #2196F3; border: 1px solid #2196F344; }
+    .badge-orange{ background: #FF6B3522; color: #FF6B35; border: 1px solid #FF6B3544; }
+
+    .bar-inline { display: flex; align-items: center; gap: 10px; }
+    .bar-track { flex: 1; height: 6px; background: #1E2A3A; border-radius: 3px; overflow: hidden; }
+    .bar-fill { height: 100%; background: #00D4AA; border-radius: 3px; }
+
+    .insight-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .insight-card { background: #2D3F55; border-radius: 12px; padding: 18px; border: 1px solid #3A5070; }
+    .insight-card .i-icon { font-size: 28px; margin-bottom: 10px; }
+    .insight-card .i-title { font-size: 12px; color: #8BA3BE; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+    .insight-card .i-value { font-size: 17px; font-weight: 700; color: #00D4AA; margin-bottom: 6px; }
+    .insight-card .i-desc { font-size: 12px; color: #8BA3BE; line-height: 1.5; }
+
+    .chip { display: inline-block; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; margin: 4px; }
+
+    .footer { margin-top: 28px; padding-top: 16px; border-top: 1px solid #2D3F55; display: flex; justify-content: space-between; align-items: center; }
+    .footer p { font-size: 11px; color: #4A6480; }
+    .footer a { color: #00D4AA; text-decoration: none; font-size: 11px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>📊 Dashboard Retail Sales</h1>
+    <p>Análisis de 500 transacciones · 3 Sucursales · 6 Categorías de producto</p>
+  </div>
+  <div class="header-badge">
+    <span>Desarrollado por</span>
+    <strong>Adrover Consultoría</strong>
+    <span style="margin-top:2px">Pablo J. Adrover · BI & Control Financiero</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showPage(0,this)">📈 Resumen Ejecutivo</div>
+  <div class="tab" onclick="showPage(1,this)">🏪 Sucursales & Clientes</div>
+  <div class="tab" onclick="showPage(2,this)">💡 Insights Clave</div>
+</div>
+
+<!-- PÁGINA 1 -->
+<div class="page active" id="page-0">
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="icon">💰</div><div class="label">Total Ventas</div>
+      <div class="value">$88.1M</div><div class="sub">500 transacciones</div>
+    </div>
+    <div class="kpi-card">
+      <div class="icon">🧾</div><div class="label">Total Órdenes</div>
+      <div class="value">500</div><div class="sub">3 sucursales activas</div>
+    </div>
+    <div class="kpi-card">
+      <div class="icon">🎯</div><div class="label">Ticket Promedio</div>
+      <div class="value">$176K</div><div class="sub">por transacción</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="icon">📦</div><div class="label">Ingreso Bruto</div>
+      <div class="value">$4.2M</div><div class="sub">margen ~5%</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="icon">⭐</div><div class="label">Rating Promedio</div>
+      <div class="value">69.9</div><div class="sub">escala 0–100</div>
+    </div>
+  </div>
+
+  <div class="chart-grid-2">
+    <div class="chart-box">
+      <h3>Ventas por Categoría <span>en millones $</span></h3>
+      <canvas id="c1"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>Ticket Promedio por Categoría <span>$ por transacción</span></h3>
+      <canvas id="c2"></canvas>
+    </div>
+  </div>
+
+  <div class="chart-grid-3">
+    <div class="chart-box">
+      <h3>Ventas por Sucursal</h3>
+      <canvas id="c3"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>Medios de Pago</h3>
+      <canvas id="c4"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>Órdenes por Categoría</h3>
+      <canvas id="c5"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- PÁGINA 2 -->
+<div class="page" id="page-1">
+  <div class="kpi-grid-4">
+    <div class="kpi-card">
+      <div class="icon">🏆</div><div class="label">Sucursal Top Ventas</div>
+      <div class="value">C · $31.3M</div><div class="sub">35.5% del total</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="icon">⚠️</div><div class="label">Rating más bajo</div>
+      <div class="value">C · 67.5</div><div class="sub">más ventas, menos satisfacción</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="icon">🔁</div><div class="label">Clientes Recurrentes</div>
+      <div class="value">~50%</div><div class="sub">base fidelizada</div>
+    </div>
+    <div class="kpi-card">
+      <div class="icon">👥</div><div class="label">Género</div>
+      <div class="value">50 / 50</div><div class="sub">Femenino / Masculino</div>
+    </div>
+  </div>
+
+  <div class="table-box">
+    <h3>📋 Comparativa por Sucursal</h3>
+    <table>
+      <thead>
+        <tr><th>Sucursal</th><th>Total Ventas</th><th>Participación</th><th>Órdenes</th><th>Ticket Prom.</th><th>Rating</th><th>Posición</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>C · Naypyitaw</strong></td><td>$31.3M</td>
+          <td><div class="bar-inline"><div class="bar-track"><div class="bar-fill" style="width:100%"></div></div><span>35.5%</span></div></td>
+          <td>169</td><td>$185.3K</td>
+          <td><span class="badge badge-orange">67.5 ⚠️</span></td>
+          <td><span class="badge badge-green">#1 Ventas</span></td>
+        </tr>
+        <tr>
+          <td><strong>A · Yangon</strong></td><td>$29.2M</td>
+          <td><div class="bar-inline"><div class="bar-track"><div class="bar-fill" style="width:93%"></div></div><span>33.1%</span></div></td>
+          <td>168</td><td>$173.7K</td>
+          <td><span class="badge badge-green">71.2 ✓</span></td>
+          <td><span class="badge badge-blue">#2</span></td>
+        </tr>
+        <tr>
+          <td><strong>B · Mandalay</strong></td><td>$27.6M</td>
+          <td><div class="bar-inline"><div class="bar-track"><div class="bar-fill" style="width:88%"></div></div><span>31.3%</span></div></td>
+          <td>163</td><td>$169.2K</td>
+          <td><span class="badge badge-green">70.9 ✓</span></td>
+          <td><span class="badge badge-blue">#3</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="chart-grid-2">
+    <div class="chart-box">
+      <h3>Rating por Sucursal <span>escala 0–100</span></h3>
+      <canvas id="c6"></canvas>
+    </div>
+    <div class="chart-box">
+      <h3>Ticket Promedio por Categoría <span>ranking completo</span></h3>
+      <canvas id="c7"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- PÁGINA 3 -->
+<div class="page" id="page-2">
+  <div class="insight-grid">
+    <div class="insight-card">
+      <div class="i-icon">🔍</div>
+      <div class="i-title">Paradoja Sucursal C</div>
+      <div class="i-value">+$4M más que B · Rating más bajo</div>
+      <div class="i-desc">La sucursal C lidera en ventas ($31.3M) pero tiene el rating más bajo (67.5 vs 71.2 de A). Gran oportunidad de mejora en experiencia del cliente sin tocar el volumen.</div>
+    </div>
+    <div class="insight-card">
+      <div class="i-icon">💳</div>
+      <div class="i-title">Medios de Pago Equilibrados</div>
+      <div class="i-value">Efectivo 35.7% · Billetera 35.6%</div>
+      <div class="i-desc">Distribución casi perfecta entre los 3 medios. El negocio no depende de un solo canal de cobro — bajo riesgo operativo ante cambios regulatorios.</div>
+    </div>
+    <div class="insight-card">
+      <div class="i-icon">📱</div>
+      <div class="i-title">Smartphones: Rey del Ticket</div>
+      <div class="i-value">$201.3K por transacción</div>
+      <div class="i-desc">Smartphones lidera ticket promedio con un 27% más que Accesorios. Potencial de bundle para elevar el ticket en categorías de menor valor.</div>
+    </div>
+    <div class="insight-card">
+      <div class="i-icon">🎯</div>
+      <div class="i-title">Distribución Balanceada</div>
+      <div class="i-value">3 sucursales casi 33% c/u</div>
+      <div class="i-desc">Ninguna sucursal concentra más del 36% del total. El modelo es resiliente: si una sucursal cae, el impacto es absorbible.</div>
+    </div>
+    <div class="insight-card">
+      <div class="i-icon">👥</div>
+      <div class="i-title">Base Fidelizada</div>
+      <div class="i-value">~50% ya eligió volver</div>
+      <div class="i-desc">La mitad de los clientes son recurrentes. Un programa de fidelización podría convertir el 50% restante con un incentivo simple en la segunda compra.</div>
+    </div>
+    <div class="insight-card">
+      <div class="i-icon">📊</div>
+      <div class="i-title">Rating: Área de Mejora</div>
+      <div class="i-value">69.9 / 100 promedio global</div>
+      <div class="i-desc">Llevar el rating a 80+ en todas las sucursales podría impactar directamente en recompra y recomendación orgánica.</div>
+    </div>
+  </div>
+
+  <div class="chart-box" style="margin-bottom:16px">
+    <h3>🚀 Recomendaciones Estratégicas</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:12px">
+      <div>
+        <p style="font-size:12px;color:#00D4AA;font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.8px">Prioridad Alta</p>
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:12px">
+          <li style="font-size:13px;color:#FFFFFF;padding-left:14px;border-left:3px solid #00D4AA">Investigar caída de rating en Sucursal C — entrevistas de salida, devoluciones, tiempos de espera</li>
+          <li style="font-size:13px;color:#FFFFFF;padding-left:14px;border-left:3px solid #00D4AA">Bundle Smartphones + Accesorios — elevar ticket promedio en categorías de menor valor</li>
+          <li style="font-size:13px;color:#FFFFFF;padding-left:14px;border-left:3px solid #00D4AA">Programa de fidelización — incentivo en 2da compra para convertir clientes nuevos en recurrentes</li>
+        </ul>
+      </div>
+      <div>
+        <p style="font-size:12px;color:#2196F3;font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.8px">Monitoreo Continuo</p>
+        <ul style="list-style:none;display:flex;flex-direction:column;gap:12px">
+          <li style="font-size:13px;color:#FFFFFF;padding-left:14px;border-left:3px solid #2196F3">Mix de medios de pago — anticipar impacto en flujo de caja si Billetera Digital sigue creciendo</li>
+          <li style="font-size:13px;color:#FFFFFF;padding-left:14px;border-left:3px solid #2196F3">Gaming y Accesorios — categorías con menor dinamismo relativo, revisar mix de producto</li>
+          <li style="font-size:13px;color:#FFFFFF;padding-left:14px;border-left:3px solid #2196F3">Balance entre sucursales — mantener distribución equilibrada para reducir dependencia crítica</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-box">
+    <h3>🔧 Stack Tecnológico</h3>
+    <div style="margin-top:10px;margin-bottom:14px">
+      <span class="chip" style="background:#1E2A3A;border:1px solid #00D4AA44;color:#00D4AA">Power BI Desktop</span>
+      <span class="chip" style="background:#1E2A3A;border:1px solid #2196F344;color:#2196F3">DAX Avanzado</span>
+      <span class="chip" style="background:#1E2A3A;border:1px solid #FF6B3544;color:#FF6B35">Power Query</span>
+      <span class="chip" style="background:#1E2A3A;border:1px solid #00D4AA44;color:#00D4AA">10 Medidas DAX</span>
+      <span class="chip" style="background:#1E2A3A;border:1px solid #2196F344;color:#2196F3">4 Columnas Calculadas</span>
+      <span class="chip" style="background:#1E2A3A;border:1px solid #FF6B3544;color:#FF6B35">500 registros</span>
+    </div>
+    <p style="font-size:12px;color:#8BA3BE;line-height:1.6">
+      Dataset: Retail Sales (Kaggle) · Transformaciones en Power Query: renombrado de columnas al castellano, limpieza de tipos de datos, columnas calculadas con SWITCH() para traducción de valores categóricos. Medidas DAX incluyen: participación relativa, ticket promedio por categoría, detección de top performers con TOPN(), y margen bruto. Análisis orientado a decisiones operativas para PyMEs del sector comercial.
+    </p>
+  </div>
+</div>
+
+<div class="footer">
+  <p>📁 <a href="https://github.com/pablojadrover-bit/retail-sales-analysis" target="_blank">github.com/pablojadrover-bit/retail-sales-analysis</a></p>
+  <p>Adrover Consultoría · Pablo J. Adrover · Pergamino, Buenos Aires · 2025</p>
+  <a href="https://www.linkedin.com/in/pablojadrover" target="_blank">🔗 LinkedIn</a>
+</div>
+
+<script>
+Chart.defaults.color = '#8BA3BE';
+Chart.defaults.borderColor = '#1E2A3A';
+const tt = { backgroundColor:'#1E2A3A', borderColor:'#3A5070', borderWidth:1, titleColor:'#FFFFFF', bodyColor:'#8BA3BE', padding:10 };
+const base = { responsive:true, maintainAspectRatio:true, plugins:{ legend:{display:false}, tooltip:tt } };
+
+// C1 - Ventas por categoría (horizontal)
+new Chart(document.getElementById('c1'),{ type:'bar', data:{
+  labels:['Smartphones','Laptops','Televisión','Audio','Gaming','Accesorios'],
+  datasets:[{ data:[16800000,15600000,15200000,14900000,13400000,12200000], backgroundColor:'#00D4AA', borderRadius:6, borderSkipped:false }]
+}, options:{ ...base, indexAxis:'y', scales:{ x:{ grid:{color:'#1E2A3A'}, ticks:{color:'#8BA3BE', callback:v=>'$'+(v/1000000).toFixed(1)+'M'} }, y:{ grid:{display:false}, ticks:{color:'#FFFFFF'} } } } });
+
+// C2 - Ticket promedio
+new Chart(document.getElementById('c2'),{ type:'bar', data:{
+  labels:['Smartphones','Audio','Televisión','Laptops','Gaming','Accesorios'],
+  datasets:[{ data:[201250,189400,182100,178600,172300,158800], backgroundColor:['#00D4AA','#00C4A0','#00B490','#009F80','#2196F3','#FF6B35'], borderRadius:6, borderSkipped:false }]
+}, options:{ ...base, scales:{ x:{ grid:{display:false}, ticks:{color:'#FFFFFF'} }, y:{ grid:{color:'#1E2A3A'}, ticks:{color:'#8BA3BE', callback:v=>'$'+(v/1000).toFixed(0)+'K'} } } } });
+
+// C3 - Ventas por sucursal
+new Chart(document.getElementById('c3'),{ type:'bar', data:{
+  labels:['Sucursal C','Sucursal A','Sucursal B'],
+  datasets:[{ data:[31301346,29238838,27564620], backgroundColor:['#00D4AA','#2196F3','#FF6B35'], borderRadius:6, borderSkipped:false }]
+}, options:{ ...base, scales:{ x:{ grid:{display:false}, ticks:{color:'#FFFFFF'} }, y:{ grid:{color:'#1E2A3A'}, ticks:{color:'#8BA3BE', callback:v=>'$'+(v/1000000).toFixed(1)+'M'} } } } });
+
+// C4 - Medios de pago (donut)
+new Chart(document.getElementById('c4'),{ type:'doughnut', data:{
+  labels:['Efectivo','Billetera Digital','Tarjeta de Crédito'],
+  datasets:[{ data:[35.7,35.6,28.7], backgroundColor:['#00D4AA','#2196F3','#FF6B35'], borderColor:'#2D3F55', borderWidth:3, hoverOffset:8 }]
+}, options:{ responsive:true, maintainAspectRatio:true, cutout:'65%', plugins:{ legend:{display:true, position:'bottom', labels:{color:'#8BA3BE', padding:14, font:{size:11}, boxWidth:12}}, tooltip:{...tt, callbacks:{label:ctx=>' '+ctx.label+': '+ctx.raw+'%'}} } } });
+
+// C5 - Órdenes por categoría (donut)
+new Chart(document.getElementById('c5'),{ type:'doughnut', data:{
+  labels:['Smartphones','Laptops','Televisión','Audio','Gaming','Accesorios'],
+  datasets:[{ data:[92,88,86,84,80,70], backgroundColor:['#00D4AA','#00C0A0','#2196F3','#1A7FDB','#FF6B35','#E55020'], borderColor:'#2D3F55', borderWidth:3, hoverOffset:6 }]
+}, options:{ responsive:true, maintainAspectRatio:true, cutout:'60%', plugins:{ legend:{display:true, position:'bottom', labels:{color:'#8BA3BE', padding:10, font:{size:10}, boxWidth:10}}, tooltip:tt } } });
+
+// C6 - Rating por sucursal
+new Chart(document.getElementById('c6'),{ type:'bar', data:{
+  labels:['Sucursal A','Sucursal B','Sucursal C'],
+  datasets:[{ data:[71.2,70.9,67.5], backgroundColor:['#00D4AA','#2196F3','#FF6B35'], borderRadius:8, borderSkipped:false }]
+}, options:{ ...base, scales:{ x:{ grid:{display:false}, ticks:{color:'#FFFFFF'} }, y:{ grid:{color:'#1E2A3A'}, ticks:{color:'#8BA3BE'}, min:60, max:80 } } } });
+
+// C7 - Ticket ranking horizontal
+new Chart(document.getElementById('c7'),{ type:'bar', data:{
+  labels:['Smartphones','Audio','Televisión','Laptops','Gaming','Accesorios'],
+  datasets:[{ data:[201250,189400,182100,178600,172300,158800], backgroundColor:'#00D4AA', borderRadius:6, borderSkipped:false }]
+}, options:{ ...base, indexAxis:'y', scales:{ x:{ grid:{color:'#1E2A3A'}, ticks:{color:'#8BA3BE', callback:v=>'$'+(v/1000).toFixed(0)+'K'} }, y:{ grid:{display:false}, ticks:{color:'#FFFFFF'} } } } });
+
+function showPage(idx, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+idx).classList.add('active');
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>
